@@ -140,14 +140,15 @@ function useTone(enabled) {
   return { beep };
 }
 
-function MioSprite({ direction = "right", className = "" }) {
+function MioSprite({ direction = "right", className = "", size = 32 }) {
   return (
     <div
       className={`relative ${className}`}
       style={{ transform: direction === "left" ? "scaleX(-1)" : "scaleX(1)" }}
     >
       <div className="absolute inset-0 rounded-xl bg-sky-300/20 blur-[6px] scale-90" />
-      <div className="relative h-8 w-8 overflow-hidden rounded-xl border border-white/70 bg-white/80 shadow-[0_6px_18px_rgba(70,90,140,0.28)]">
+      <div className="relative overflow-hidden rounded-xl border border-white/70 bg-white/80 shadow-[0_6px_18px_rgba(70,90,140,0.28)]"
+        style={{ width: size, height: size }}>
         <img src={MIO_IMAGE} alt="Mio" className="h-full w-full object-contain object-center" draggable={false} />
       </div>
     </div>
@@ -409,7 +410,7 @@ export default function MioEasterMazeGame() {
                 animate={{ scale: [1, 1.08, 1] }}
                 transition={{ duration: 0.35 }}
               >
-                <MioSprite direction={playerDirection} />
+                <MioSprite direction={playerDirection} size={Math.min(cellSize, 32)} />
               </motion.div>
             )}
           </>
