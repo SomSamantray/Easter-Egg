@@ -12,7 +12,7 @@ const MOBILE_CELL = 24;
 const SAFE_TOP = "max(env(safe-area-inset-top), 0px)";
 const SAFE_BOTTOM = "max(env(safe-area-inset-bottom), 0px)";
 // Replace this with your image path if needed (e.g., /mio.png or hosted URL)
-const MIO_IMAGE = "https://res.cloudinary.com/dfzfpfdj5/image/upload/v1774937583/MIO_Face_jdbiyb.png";
+const MIO_IMAGE = "/mio.png";
 
 const LEVELS = [
   {
