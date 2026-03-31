@@ -6,8 +6,11 @@ import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
 import { Cat, Egg, Trophy, RotateCcw, Play, ChevronRight, Clock3, Heart, Volume2, VolumeX } from "lucide-react";
 
-const CELL = 40;
-const SWIPE_THRESHOLD = 24;
+const MOBILE_BREAKPOINT = 768;
+const DESKTOP_CELL = 40;
+const MOBILE_CELL = 24;
+const SAFE_TOP = "max(env(safe-area-inset-top), 0px)";
+const SAFE_BOTTOM = "max(env(safe-area-inset-bottom), 0px)";
 // Replace this with your image path if needed (e.g., /mio.png or hosted URL)
 const MIO_IMAGE = "https://res.cloudinary.com/dfzfpfdj5/image/upload/v1774937583/MIO_Face_jdbiyb.png";
 
@@ -162,22 +165,32 @@ export default function MioEasterMazeGame() {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [message, setMessage] = useState("Help Mio find all the Easter eggs!");
-  const [soundOn, setSoundOn] = useState(true);
-  const [bestScore, setBestScore] = useState(0);
-  const [touchStart, setTouchStart] = useState(null);
-  const [lastDragMove, setLastDragMove] = useState(null);
+  const [soundOn, setSoundOn] = useState(true);  const [bestScore, setBestScore] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState(0);
 
   const { beep } = useTone(soundOn);
 
   useEffect(() => {
     const saved = Number(localStorage.getItem("mio-easter-best") || 0);
     setBestScore(saved);
+
+    const updateViewport = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      setViewportHeight(window.innerHeight);
+      document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
+    };
+
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
   }, []);
 
   const level = LEVELS[levelIndex];
   const levelData = useMemo(() => parseLevel(level), [level]);
 
   const collectedCount = eggs.filter((e) => e.collected).length;
+  const cellSize = isMobile ? MOBILE_CELL : DESKTOP_CELL;
   const totalEggs = eggs.length;
   const progress = totalEggs ? (collectedCount / totalEggs) * 100 : 0;
 
@@ -345,39 +358,24 @@ export default function MioEasterMazeGame() {
     setLevelIndex(next);
     initLevel(next, true, true);
   };
-
-  const handleTouchStart = (e) => {
-    const t = e.touches[0];
-    const startPoint = { x: t.clientX, y: t.clientY };
-    setTouchStart(startPoint);
-    setLastDragMove(startPoint);
-  };
-
-  const handleTouchMove = (e) => {
-    if (!touchStart || screen !== "playing") return;
-    const t = e.touches[0];
-    const currentPoint = { x: t.clientX, y: t.clientY };
-    const anchor = lastDragMove || touchStart;
-    const dx = currentPoint.x - anchor.x;
-    const dy = currentPoint.y - anchor.y;
-
-    if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) return;
-
-    e.preventDefault();
-
-    if (Math.abs(dx) > Math.abs(dy)) {
-      tryMove(dx > 0 ? 1 : -1, 0);
-    } else {
-      tryMove(0, dy > 0 ? 1 : -1);
-    }
-
-    setLastDragMove(currentPoint);
-  };
-
-  const handleTouchEnd = () => {
-    setTouchStart(null);
-    setLastDragMove(null);
-  };
+  const boardWidth = levelData.width * cellSize + (levelData.width - 1) * 4;
+  const boardHeight = levelData.height * cellSize + (levelData.height - 1) * 4;
+  const mobileShellStyle = isMobile
+    ? {
+        height: viewportHeight ? `${viewportHeight}px` : "var(--app-height, 100vh)",
+        paddingTop: SAFE_TOP,
+        paddingBottom: SAFE_BOTTOM,
+      }
+    : undefined;
+  const mobileBoardWrapStyle = isMobile ? { minHeight: 0 } : undefined;
+  const mobileBoardStyle = isMobile
+    ? {
+        width: `${boardWidth}px`,
+        height: `${boardHeight}px`,
+        maxWidth: "100%",
+        maxHeight: "100%",
+      }
+    : undefined;
 
   const renderCell = (x, y) => {
     const cell = levelData.walls[y][x];
@@ -400,7 +398,7 @@ export default function MioEasterMazeGame() {
         key={`${x}-${y}`}
         layout
         className={`${classes} ${bg}`}
-        style={{ width: CELL, height: CELL }}
+        style={{ width: cellSize, height: cellSize }}
         initial={{ scale: 0.9, opacity: 0.8 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.18 }}
@@ -432,92 +430,137 @@ export default function MioEasterMazeGame() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-pink-100 via-amber-50 to-emerald-100 p-4 md:p-8">
-      <div className="mx-auto max-w-7xl grid gap-6 lg:grid-cols-[360px_1fr]">
-        <Card className="rounded-3xl border-white/60 bg-white/80 backdrop-blur shadow-xl">
-          <CardContent className="p-6 space-y-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-pink-100 px-3 py-1 text-sm font-medium text-pink-700 mb-3">
-                  <Cat className="h-4 w-4" /> Mio's Easter Maze
+    <div
+      className={`w-full bg-gradient-to-br from-pink-100 via-amber-50 to-emerald-100 ${isMobile ? "overflow-hidden p-0 overscroll-none touch-manipulation" : "min-h-screen p-4 md:p-8"}`}
+      style={mobileShellStyle}
+    >
+      <div className={`mx-auto max-w-7xl ${isMobile ? "h-full" : "grid gap-6 lg:grid-cols-[360px_1fr]"}`}>
+        {!isMobile && (
+          <Card className="rounded-3xl border-white/60 bg-white/80 backdrop-blur shadow-xl">
+            <CardContent className="p-6 space-y-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-pink-100 px-3 py-1 text-sm font-medium text-pink-700 mb-3">
+                    <Cat className="h-4 w-4" /> Mio's Easter Maze
+                  </div>
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-800">Help Mio find all the Easter eggs!</h1>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">Guide Mio through cheerful spring mazes, collect every egg, dodge bunnies, and dash to the basket exit.</p>
                 </div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-800">Help Mio find all the Easter eggs!</h1>
-                <p className="mt-2 text-sm leading-6 text-slate-600">Guide Mio through cheerful spring mazes, collect every egg, dodge bunnies, and dash to the basket exit.</p>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-2xl"
-                onClick={() => setSoundOn((s) => !s)}
-              >
-                {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard icon={<Egg className="h-4 w-4" />} label="Eggs" value={`${collectedCount}/${totalEggs}`} />
-              <StatCard icon={<Clock3 className="h-4 w-4" />} label="Time" value={`${timeLeft}s`} />
-              <StatCard icon={<Trophy className="h-4 w-4" />} label="Score" value={score} />
-              <StatCard icon={<Heart className="h-4 w-4" />} label="Lives" value={lives} />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm text-slate-600">
-                <span>Level {levelIndex + 1} of {LEVELS.length}</span>
-                <span>{level.name}</span>
-              </div>
-              <Progress value={progress} className="h-3" />
-            </div>
-
-            <div className="rounded-3xl bg-gradient-to-r from-yellow-100 to-pink-100 p-4 text-sm leading-6 text-slate-700 border border-white/60">
-              <div className="font-semibold text-slate-800 mb-1">Mio says</div>
-              {message}
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Button className="rounded-2xl h-12" onClick={startGame}>
-                <Play className="mr-2 h-4 w-4" /> New Game
-              </Button>
-              <Button variant="outline" className="rounded-2xl h-12" onClick={restartLevel}>
-                <RotateCcw className="mr-2 h-4 w-4" /> Restart Level
-              </Button>
-            </div>
-
-            <div className="rounded-3xl border border-dashed border-pink-200 bg-white/70 p-4 text-sm text-slate-600 space-y-2">
-              <p><span className="font-semibold text-slate-800">Controls:</span> Arrow keys on desktop or slide Mio with your finger on mobile.</p>
-              <p><span className="font-semibold text-slate-800">Goal:</span> Collect all eggs before reaching the basket exit.</p>
-              <p><span className="font-semibold text-slate-800">Watch out:</span> Hopping bunnies and spring traps can cost a life.</p>
-              <p><span className="font-semibold text-slate-800">Best Score:</span> {bestScore}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card className="rounded-3xl border-white/60 bg-white/75 backdrop-blur shadow-xl overflow-hidden">
-            <CardContent className="p-4 md:p-6">
-              <div
-                className="w-full overflow-auto rounded-3xl bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.9),_rgba(255,245,250,0.6),_rgba(237,255,244,0.6))] p-3 md:p-4 border border-white/60"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              >
-                <div
-                  className="grid gap-1 mx-auto w-max"
-                  style={{ gridTemplateColumns: `repeat(${levelData.width}, ${CELL}px)` }}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-2xl"
+                  onClick={() => setSoundOn((s) => !s)}
                 >
-                  {Array.from({ length: levelData.height }).flatMap((_, y) =>
-                    Array.from({ length: levelData.width }).map((__, x) => renderCell(x, y))
+                  {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <StatCard icon={<Egg className="h-4 w-4" />} label="Eggs" value={`${collectedCount}/${totalEggs}`} />
+                <StatCard icon={<Clock3 className="h-4 w-4" />} label="Time" value={`${timeLeft}s`} />
+                <StatCard icon={<Trophy className="h-4 w-4" />} label="Score" value={score} />
+                <StatCard icon={<Heart className="h-4 w-4" />} label="Lives" value={lives} />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm text-slate-600">
+                  <span>Level {levelIndex + 1} of {LEVELS.length}</span>
+                  <span>{level.name}</span>
+                </div>
+                <Progress value={progress} className="h-3" />
+              </div>
+
+              <div className="rounded-3xl bg-gradient-to-r from-yellow-100 to-pink-100 p-4 text-sm leading-6 text-slate-700 border border-white/60">
+                <div className="font-semibold text-slate-800 mb-1">Mio says</div>
+                {message}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button className="rounded-2xl h-12" onClick={startGame}>
+                  <Play className="mr-2 h-4 w-4" /> New Game
+                </Button>
+                <Button variant="outline" className="rounded-2xl h-12" onClick={restartLevel}>
+                  <RotateCcw className="mr-2 h-4 w-4" /> Restart Level
+                </Button>
+              </div>
+
+              <div className="rounded-3xl border border-dashed border-pink-200 bg-white/70 p-4 text-sm text-slate-600 space-y-2">
+                <p><span className="font-semibold text-slate-800">Controls:</span> Arrow keys on desktop or use the arrow pad on mobile.</p>
+                <p><span className="font-semibold text-slate-800">Goal:</span> Collect all eggs before reaching the basket exit.</p>
+                <p><span className="font-semibold text-slate-800">Watch out:</span> Hopping bunnies and spring traps can cost a life.</p>
+                <p><span className="font-semibold text-slate-800">Best Score:</span> {bestScore}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className={isMobile ? "h-full" : "space-y-6"}>
+          <Card className={`border-white/60 bg-white/75 backdrop-blur shadow-xl overflow-hidden ${isMobile ? "h-full rounded-none border-0 shadow-none" : "rounded-3xl"}`}>
+            <CardContent className={isMobile ? "h-full p-0" : "p-4 md:p-6"}>
+              <div className={isMobile ? "flex h-full flex-col" : "block"}>
+                {isMobile && (
+                  <div className="flex items-center justify-between gap-3 border-b border-white/60 bg-white/85 px-4 py-3 backdrop-blur">
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium uppercase tracking-[0.18em] text-pink-600">Mio's Easter Maze</div>
+                      <div className="truncate text-sm font-semibold text-slate-800">Level {levelIndex + 1}: {level.name}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CompactPill icon={<Egg className="h-3.5 w-3.5" />} value={`${collectedCount}/${totalEggs}`} />
+                      <CompactPill icon={<Clock3 className="h-3.5 w-3.5" />} value={`${timeLeft}s`} />
+                      <CompactPill icon={<Heart className="h-3.5 w-3.5" />} value={lives} />
+                    </div>
+                  </div>
+                )}
+
+                <div className={isMobile ? "flex h-full min-h-0 flex-col" : "block"}>
+                  <div
+                    className={`w-full rounded-3xl bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.9),_rgba(255,245,250,0.6),_rgba(237,255,244,0.6))] border border-white/60 ${isMobile ? "flex-1 min-h-0 overflow-hidden rounded-none border-0 p-3" : "overflow-auto p-3 md:p-4"}`}
+                    style={mobileBoardWrapStyle}
+                  >
+                    <div className="flex h-full w-full items-center justify-center overflow-hidden">
+                      <div
+                        className="grid gap-1 mx-auto select-none"
+                        style={{
+                          gridTemplateColumns: `repeat(${levelData.width}, ${cellSize}px)`,
+                          ...mobileBoardStyle,
+                        }}
+                      >
+                        {Array.from({ length: levelData.height }).flatMap((_, y) =>
+                          Array.from({ length: levelData.width }).map((__, x) => renderCell(x, y))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isMobile && (
+                    <div className="border-t border-white/60 bg-white/90 px-4 py-3 backdrop-blur supports-[padding:max(0px)]:pb-[calc(12px+env(safe-area-inset-bottom))]">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <CompactPill icon={<Trophy className="h-3.5 w-3.5" />} value={score} />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-9 rounded-2xl bg-white/90"
+                          onClick={() => setSoundOn((s) => !s)}
+                        >
+                          {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <MobileControls onMove={tryMove} />
+                    </div>
                   )}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <MiniLegend sprite label="Mio" description="Your intelligent cat mascot" />
-            <MiniLegend emoji="🥚" label="Eggs" description="Collect them all" />
-            <MiniLegend emoji="🧺" label="Exit" description="Unlocks after all eggs" />
-          </div>
+          {!isMobile && (
+            <div className="grid gap-4 md:grid-cols-3">
+              <MiniLegend sprite label="Mio" description="Your intelligent cat mascot" />
+              <MiniLegend emoji="🥚" label="Eggs" description="Collect them all" />
+              <MiniLegend emoji="🧺" label="Exit" description="Unlocks after all eggs" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -573,6 +616,38 @@ export default function MioEasterMazeGame() {
           </motion.div>
         </div>
       )}
+    </div>
+  );
+}
+
+function MobileControls({ onMove }) {
+  const btnClass = "h-14 w-14 rounded-2xl bg-white/95 shadow-md border border-white/80 text-slate-700 active:scale-95 text-2xl font-semibold";
+
+  return (
+    <div className="mx-auto flex w-full max-w-[220px] flex-col items-center gap-2">
+      <Button variant="outline" className={btnClass} onClick={() => onMove(0, -1)} aria-label="Move up">
+        ↑
+      </Button>
+      <div className="flex w-full items-center justify-between gap-2">
+        <Button variant="outline" className={btnClass} onClick={() => onMove(-1, 0)} aria-label="Move left">
+          ←
+        </Button>
+        <Button variant="outline" className={btnClass} onClick={() => onMove(1, 0)} aria-label="Move right">
+          →
+        </Button>
+      </div>
+      <Button variant="outline" className={btnClass} onClick={() => onMove(0, 1)} aria-label="Move down">
+        ↓
+      </Button>
+    </div>
+  );
+}
+
+function CompactPill({ icon, value }) {
+  return (
+    <div className="inline-flex items-center gap-1.5 rounded-full bg-pink-50 px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+      {icon}
+      <span>{value}</span>
     </div>
   );
 }
