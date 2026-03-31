@@ -167,7 +167,6 @@ export default function MioEasterMazeGame() {
   const [message, setMessage] = useState("Help Mio find all the Easter eggs!");
   const [soundOn, setSoundOn] = useState(true);  const [bestScore, setBestScore] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState(0);
 
   const { beep } = useTone(soundOn);
 
@@ -177,8 +176,6 @@ export default function MioEasterMazeGame() {
 
     const updateViewport = () => {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-      setViewportHeight(window.innerHeight);
-      document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
     };
 
     updateViewport();
@@ -360,14 +357,6 @@ export default function MioEasterMazeGame() {
   };
   const boardWidth = levelData.width * cellSize + (levelData.width - 1) * 4;
   const boardHeight = levelData.height * cellSize + (levelData.height - 1) * 4;
-  const mobileShellStyle = isMobile
-    ? {
-        height: viewportHeight ? `${viewportHeight}px` : "var(--app-height, 100vh)",
-        paddingTop: SAFE_TOP,
-        paddingBottom: SAFE_BOTTOM,
-      }
-    : undefined;
-  const mobileBoardWrapStyle = isMobile ? { minHeight: 0 } : undefined;
   const mobileBoardStyle = isMobile
     ? {
         width: `${boardWidth}px`,
@@ -431,8 +420,7 @@ export default function MioEasterMazeGame() {
 
   return (
     <div
-      className={`w-full bg-gradient-to-br from-pink-100 via-amber-50 to-emerald-100 ${isMobile ? "overflow-hidden p-0 overscroll-none touch-manipulation" : "min-h-screen p-4 md:p-8"}`}
-      style={mobileShellStyle}
+      className={`w-full bg-gradient-to-br from-pink-100 via-amber-50 to-emerald-100 ${isMobile ? "fixed inset-0 overflow-hidden p-0 overscroll-none touch-manipulation" : "min-h-screen p-4 md:p-8"}`}
     >
       <div className={`mx-auto max-w-7xl ${isMobile ? "h-full" : "grid gap-6 lg:grid-cols-[360px_1fr]"}`}>
         {!isMobile && (
@@ -498,9 +486,9 @@ export default function MioEasterMazeGame() {
         <div className={isMobile ? "h-full" : "space-y-6"}>
           <Card className={`border-white/60 bg-white/75 backdrop-blur shadow-xl overflow-hidden ${isMobile ? "h-full rounded-none border-0 shadow-none" : "rounded-3xl"}`}>
             <CardContent className={isMobile ? "h-full p-0" : "p-4 md:p-6"}>
-              <div className={isMobile ? "flex h-full flex-col" : "block"}>
+              <div className={isMobile ? "flex h-full min-h-0 flex-col" : "block"}>
                 {isMobile && (
-                  <div className="flex items-center justify-between gap-3 border-b border-white/60 bg-white/85 px-4 py-3 backdrop-blur">
+                  <div className="flex items-center justify-between gap-3 border-b border-white/60 bg-white/85 px-4 py-3 backdrop-blur" style={{ paddingTop: SAFE_TOP }}>
                     <div className="min-w-0">
                       <div className="text-xs font-medium uppercase tracking-[0.18em] text-pink-600">Mio's Easter Maze</div>
                       <div className="truncate text-sm font-semibold text-slate-800">Level {levelIndex + 1}: {level.name}</div>
@@ -513,10 +501,9 @@ export default function MioEasterMazeGame() {
                   </div>
                 )}
 
-                <div className={isMobile ? "flex h-full min-h-0 flex-col" : "block"}>
+                <div className={isMobile ? "flex flex-1 min-h-0 flex-col" : "block"}>
                   <div
                     className={`w-full rounded-3xl bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.9),_rgba(255,245,250,0.6),_rgba(237,255,244,0.6))] border border-white/60 ${isMobile ? "flex-1 min-h-0 overflow-hidden rounded-none border-0 p-3" : "overflow-auto p-3 md:p-4"}`}
-                    style={mobileBoardWrapStyle}
                   >
                     <div className="flex h-full w-full items-center justify-center overflow-hidden">
                       <div
