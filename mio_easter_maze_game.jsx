@@ -148,7 +148,7 @@ function MioSprite({ direction = "right", className = "" }) {
     >
       <div className="absolute inset-0 rounded-xl bg-sky-300/20 blur-[6px] scale-90" />
       <div className="relative h-8 w-8 overflow-hidden rounded-xl border border-white/70 bg-white/80 shadow-[0_6px_18px_rgba(70,90,140,0.28)]">
-        <img src={MIO_IMAGE} alt="Mio" className="h-full w-full object-cover object-center scale-[1.18]" draggable={false} />
+        <img src={MIO_IMAGE} alt="Mio" className="h-full w-full object-contain object-center" draggable={false} />
       </div>
     </div>
   );
