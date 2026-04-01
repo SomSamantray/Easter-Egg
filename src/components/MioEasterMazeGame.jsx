@@ -560,22 +560,31 @@ export default function MioEasterMazeGame() {
             className="w-full max-w-lg rounded-[2rem] bg-white p-8 shadow-2xl border border-white/60"
           >
             <div className="text-center space-y-4">
-              <div className="text-6xl">
-                {screen === "victory" ? "🎉" : screen === "gameover" ? "😿" : "🌷"}
-              </div>
-              <Badge className="rounded-full px-4 py-1 text-sm bg-pink-100 text-pink-700 hover:bg-pink-100">
-                {screen === "intro" && "Spring Adventure"}
-                {screen === "levelclear" && "Level Cleared"}
-                {screen === "victory" && "Basket Filled"}
-                {screen === "gameover" && "Try Again"}
-              </Badge>
+              {screen === "intro" ? (
+                <div className="flex justify-center">
+                  <img src={MIO_IMAGE} alt="Mio" className="h-40 w-auto object-contain" draggable={false} />
+                </div>
+              ) : (
+                <div className="text-6xl">
+                  {screen === "victory" ? "🎉" : screen === "gameover" ? "😿" : "🌷"}
+                </div>
+              )}
+              {screen !== "intro" && (
+                <Badge className="rounded-full px-4 py-1 text-sm bg-pink-100 text-pink-700 hover:bg-pink-100">
+                  {screen === "levelclear" && "Level Cleared"}
+                  {screen === "victory" && "Basket Filled"}
+                  {screen === "gameover" && "Try Again"}
+                </Badge>
+              )}
               <h2 className="text-3xl font-bold text-slate-800">
                 {screen === "intro" && "Help Mio find all the Easter eggs!"}
                 {screen === "levelclear" && `${level.name} complete!`}
                 {screen === "victory" && "Mio saved Easter!"}
                 {screen === "gameover" && "The maze won this round"}
               </h2>
-              <p className="text-slate-600 leading-7">{message}</p>
+              {screen !== "intro" && (
+                <p className="text-slate-600 leading-7">{message}</p>
+              )}
 
               <div className="grid grid-cols-3 gap-3 text-left">
                 <StatCard icon={<Trophy className="h-4 w-4" />} label="Score" value={score} compact />
